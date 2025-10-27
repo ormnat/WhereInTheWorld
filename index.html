@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Where in the World?</title>
+    <!-- We'll use the Inter font from Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- All CSS styles are included here -->
+    <style>
+        body {
+            font-family: 'Inter', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f3f4f6; /* Light gray background */
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #1f2937;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 5px 10px rgba(0, 0, 0, 0.05);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        h1 {
+            color: #111827;
+            margin-bottom: 2rem;
+            font-size: 1.75rem; /* Responsive font size */
+            font-weight: 700;
+        }
+
+        /* Grid layout for the country list */
+        #country-list {
+            display: grid;
+            /* Responsive columns: 1 on small, 2 on medium */
+            grid-template-columns: repeat(1, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        /* Responsive columns for medium screens and up */
+        @media (min-width: 500px) {
+            #country-list {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* Styling for each checkbox item */
+        .country-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .country-item:hover {
+            background-color: #f0f4ff;
+            border-color: #a5b4fc;
+        }
+
+        .country-item input[type="checkbox"] {
+            margin-right: 0.75rem;
+            transform: scale(1.2);
+            accent-color: #4f46e5; /* Modern accent color */
+        }
+        
+        .country-item label {
+            cursor: pointer;
+            flex-grow: 1;
+            font-weight: 600;
+        }
+
+        /* Verify button styling */
+        #verify-button {
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+            padding: 0.85rem 1.75rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+        }
+
+        #verify-button:hover {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+        }
+
+        /* Shake animation for incorrect answers */
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            transform: translate3d(0, 0, 0);
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* Success message container */
+        #success-message {
+            display: none; /* Hidden by default */
+            text-align: center;
+            margin-top: 2rem;
+            max-width: 100%;
+        }
+
+        #success-message img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Main quiz container -->
+    <div class="container" id="quiz-container">
+        <h1>Where in the world are the Ormond's?</h1>
+        
+        <!-- Checkboxes will be dynamically inserted here -->
+        <div id="country-list"></div>
+        
+        <button id="verify-button">Verify</button>
+    </div>
+
+    <!-- Success message and image container (initially hidden) -->
+    <div id="success-message">
+        <!-- The success image -->
+        <img src="To Uncover a Secret.jpg" alt="Success Image: To Uncover a Secret">
+    </div>
+
+    <!-- All JavaScript logic is included here -->
+    <script>
+        // --- DATA ---
+        
+        // List of correct answers
+        const correctCountries = [
+            "Germany", "Switzerland", "France", "Italy", "Iceland", "Malta", "Hungary",
+            "Netherlands", "Ireland", "Canada", "United States"
+        ];
+        
+        // List of all countries (correct + red herrings)
+        const allCountries = [
+            ...correctCountries,
+            "England", "Scotland", "Croatia", "Belgium", "Mexico", "Portugal", "Poland"
+        ];
+
+        // --- DOM ELEMENTS ---
+        
+        const countryListDiv = document.getElementById('country-list');
+        const verifyButton = document.getElementById('verify-button');
+        const quizContainer = document.getElementById('quiz-container');
+        const successMessage = document.getElementById('success-message');
+
+        // --- FUNCTIONS ---
+
+        /**
+         * Shuffles an array in place using the Fisher-Yates algorithm.
+         * @param {Array} array - The array to shuffle.
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+            }
+        }
+
+        /**
+         * Clears, shuffles, and re-renders the list of countries as checkboxes.
+         */
+        function renderCountries() {
+            countryListDiv.innerHTML = ''; // Clear existing list
+            shuffleArray(allCountries); // Shuffle the array
+            
+            allCountries.forEach(country => {
+                const countryId = country.replace(/\s+/g, '-'); // Create a unique ID (e.g., "United-States")
+                
+                // Create the HTML for the country item
+                const countryItem = document.createElement('div');
+                countryItem.className = 'country-item';
+                
+                // Set inner HTML for checkbox and label
+                countryItem.innerHTML = `
+                    <input type="checkbox" id="${countryId}" value="${country}">
+                    <label for="${countryId}">${country}</label>
+                `;
+                
+                // Add click listener to the whole item to toggle the checkbox
+                countryItem.addEventListener('click', (e) => {
+                    // Don't interfere if the click was directly on the input or label
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                        const checkbox = countryItem.querySelector('input[type="checkbox"]');
+                        checkbox.checked = !checkbox.checked;
+                    }
+                });
+
+                countryListDiv.appendChild(countryItem);
+            });
+        }
+
+        /**
+         * Checks the selected answers against the correct list.
+         */
+        function checkAnswers() {
+            // Get all checked checkboxes
+            const selectedCheckboxes = Array.from(countryListDiv.querySelectorAll('input[type="checkbox"]:checked'));
+            
+            // Get the 'value' (country name) from each checked box
+            const selectedCountries = selectedCheckboxes.map(cb => cb.value);
+
+            // Sort both arrays to ensure order doesn't matter for comparison
+            const sortedSelected = [...selectedCountries].sort();
+            const sortedCorrect = [...correctCountries].sort();
+
+            // Check if the two arrays are identical
+            const isCorrect = sortedSelected.length === sortedCorrect.length &&
+                              sortedSelected.every((value, index) => value === sortedCorrect[index]);
+
+            if (isCorrect) {
+                // --- SUCCESS ---
+                quizContainer.style.display = 'none';
+                successMessage.style.display = 'block';
+            } else {
+                // --- INCORRECT ---
+                quizContainer.classList.add('shake');
+                
+                // Disable button during shake
+                verifyButton.disabled = true;
+
+                // After the animation finishes, remove the class and reset
+                setTimeout(() => {
+                    quizContainer.classList.remove('shake');
+                    resetQuiz();
+                    verifyButton.disabled = false;
+                }, 500); // Must match the animation duration in CSS
+            }
+        }
+
+        /**
+         * Resets the quiz by re-shuffling and re-rendering the countries.
+         */
+        function resetQuiz() {
+            // Unchecking is handled by renderCountries, which rebuilds the list
+            renderCountries();
+        }
+
+        // --- INITIALIZATION ---
+        
+        // Wait for the page to fully load before setting up
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCountries(); // Populate the list on page load
+            verifyButton.addEventListener('click', checkAnswers); // Listen for clicks on the button
+        });
+
+    </script>
+</body>
+</html>
+
